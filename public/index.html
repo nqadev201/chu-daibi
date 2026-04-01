@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luyện Chú Đại Bi</title>
+
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+<style>
+body {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;      /* căn giữa dọc */
+  justify-content: center;  /* căn giữa ngang */
+}
+.card { border-radius: 15px; }
+.question { font-size: 1.25rem; font-weight: 600; }
+.status.correct { color: green; }
+.status.wrong { color: red; }
+</style>
+</head>
+
+<body>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8">
+      <div class="card shadow">
+        <div class="card-body text-center">
+          <h4 class="text-center mb-3">Luyện nhớ Chú Đại Bi</h4>
+
+          <button id="startBtn" class="btn btn-primary btn-block mb-3" onclick="start()">Bắt đầu</button>
+
+          <div id="quiz" style="display:none">
+            <div class="question mb-3" id="question"></div>
+            <input id="answer" class="form-control" placeholder="Nhập đầy đủ câu..." onkeypress="handleKey(event)" />
+            <div id="status" class="status mt-2"></div>
+          </div>
+
+          <div id="result" class="mt-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let sessionId = null;
+
+async function start() {
+  const btn = document.getElementById('startBtn');
+  btn.innerText = 'Làm lại bài mới';
+  btn.classList.remove('btn-primary');
+  btn.classList.add('btn-warning');
+
+  // Xóa kết quả cũ
+  document.getElementById('result').innerHTML = '';
+
+  const res = await fetch('/start');
+  const data = await res.json();
+  sessionId = data.sessionId;
+
+  document.getElementById('quiz').style.display = 'block';
+  nextQuestion();
+}
+
+async function nextQuestion() {
+  const res = await fetch(`/question/${sessionId}`);
+  const data = await res.json();
+
+  if (data.done) {
+    showResult(data.result);
+    return;
+  }
+
+  document.getElementById('question').innerText =
+    `Câu ${data.index}/${data.total}: ` + data.question;
+  document.getElementById('answer').value = '';
+  document.getElementById('status').innerText = '';
+}
+
+async function submitAnswer() {
+  const answer = document.getElementById('answer').value;
+
+  const res = await fetch('/answer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, answer })
+  });
+
+  const data = await res.json();
+  const statusEl = document.getElementById('status');
+
+  if (data.correct) {
+    statusEl.innerHTML = '✔ Đúng';
+    statusEl.className = 'status correct';
+  } else {
+    statusEl.innerHTML = `✘ Sai<br>Đáp án: ${data.correctAnswer}`;
+    statusEl.className = 'status wrong';
+  }
+
+  setTimeout(nextQuestion, 1200);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter') submitAnswer();
+}
+
+function showResult(result) {
+  let html = `<h5>Kết quả</h5>`;
+  html += `<p>Đúng: ${result.correct} | Sai: ${result.history.length - result.correct}</p>`;
+
+  html += `<div class="table-responsive"><table class="table table-bordered table-sm">
+    <thead class="thead-dark">
+      <tr>
+        <th>#</th>
+        <th>Câu đúng</th>
+        <th>Bạn nhập</th>
+        <th>KQ</th>
+      </tr>
+    </thead><tbody>`;
+
+  result.history.forEach((item, index) => {
+    html += `<tr>
+      <td>${index + 1}</td>
+      <td>${item.question}</td>
+      <td>${item.user}</td>
+      <td>${item.correct ? '✔' : '✘'}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  document.getElementById('quiz').style.display = 'none';
+  document.getElementById('result').innerHTML = html;
+}
+</script>
+
+</body>
+</html>
