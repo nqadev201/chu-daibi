@@ -7,7 +7,6 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// ====================== DATA ======================
 const cauChuDaiBi = [
   "Nam Mô Đại Bi Hội Thượng Phật Bồ Tát",
   "Thiên Thủ Thiên Nhãn Vô Ngại Đại Bi Tâm Đà La Ni",
@@ -97,87 +96,75 @@ const cauChuDaiBi = [
   "Ta Bà Ha"
 ];
 
-// ====================== NORMALIZE ======================
+// normalize
 function normalizeText(str) {
-  return str
-    .toLowerCase()
-    .normalize("NFC")
+  return str.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d")
     .replace(/[^a-z0-9\s]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-// ====================== SESSION ======================
+// mask
+function maskSentence(sentence, level) {
+  let words = sentence.split(' ');
+  let percent = level === 'medium' ? 0.5 : level === 'hard' ? 0.8 : 0.2;
+  let totalHide = level === 'easy' ? 1 : Math.floor(words.length * percent);
+
+  let indexes = [];
+  while (indexes.length < totalHide) {
+    let i = Math.floor(Math.random() * words.length);
+    if (!indexes.includes(i)) indexes.push(i);
+  }
+
+  return words.map((w, i) => indexes.includes(i) ? '_____' : w).join(' ');
+}
+
 let sessions = {};
 
 app.get('/start', (req, res) => {
+  const level = req.query.level || 'easy';
   const id = Date.now().toString();
 
-  // ❌ bỏ random → giữ nguyên thứ tự
   sessions[id] = {
-    questions: [...cauChuDaiBi],
-    current: 0,
-    correct: 0,
-    history: []
+    questions: [...cauChuDaiBi]
   };
 
-  res.json({ sessionId: id });
-});
-
-// ====================== QUESTION ======================
-app.get('/question/:id', (req, res) => {
-  const session = sessions[req.params.id];
-
-  if (!session) return res.json({ error: "Session not found" });
-
-  if (session.current >= session.questions.length) {
-    return res.json({ done: true, result: session });
-  }
-
-  const full = session.questions[session.current];
-
-  // vẫn random vị trí từ bị ẩn (cái này vẫn giữ để luyện)
-  const words = full.split(' ');
-  const removeIndex = Math.floor(Math.random() * words.length);
-  words[removeIndex] = '_____';
-
   res.json({
-    question: words.join(' '),
-    index: session.current + 1,
-    total: session.questions.length
+    sessionId: id,
+    questions: cauChuDaiBi.map(q => maskSentence(q, level))
   });
 });
 
-// ====================== ANSWER ======================
-app.post('/answer', (req, res) => {
-  const { sessionId, answer } = req.body;
+app.post('/submit', (req, res) => {
+  const { sessionId, answers } = req.body;
   const session = sessions[sessionId];
 
-  if (!session) return res.json({ error: "Session not found" });
+  let results = [];
+  let correctCount = 0;
+  const scorePer = 10 / session.questions.length;
 
-  const correctAnswer = session.questions[session.current];
+  session.questions.forEach((q, i) => {
+    const user = answers[i] || '';
+    const isCorrect = normalizeText(user) === normalizeText(q);
 
-  const isCorrect =
-    normalizeText(answer) === normalizeText(correctAnswer);
+    if (isCorrect) correctCount++;
 
-  if (isCorrect) session.correct++;
-
-  session.history.push({
-    question: correctAnswer,
-    user: answer,
-    correct: isCorrect
+    results.push({
+      correctAnswer: q,
+      userAnswer: user,
+      correct: isCorrect
+    });
   });
 
-  session.current++;
-
   res.json({
-    correct: isCorrect,
-    correctAnswer
+    results,
+    score: correctCount * scorePer
   });
 });
 
-// ====================== START ======================
 app.listen(PORT, () => {
   console.log(`Server chạy tại http://localhost:${PORT}`);
 });
