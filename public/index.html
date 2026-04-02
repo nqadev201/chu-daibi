@@ -3,138 +3,275 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>Luyện Chú Đại Bi</title>
 
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <style>
-body {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  min-height: 100vh;
-  display: flex;
-  align-items: center;      /* căn giữa dọc */
-  justify-content: center;  /* căn giữa ngang */
+body{
+  background:
+    linear-gradient(rgba(255,248,220,0.85), rgba(255,248,220,0.85)),
+    url('https://cdn.pixabay.com/photo/2017/08/06/00/38/buddha-2587866_1280.jpg');
+  background-size: cover;
+  font-family: 'Segoe UI';
 }
-.card { border-radius: 15px; }
-.question { font-size: 1.25rem; font-weight: 600; }
-.status.correct { color: green; }
-.status.wrong { color: red; }
+
+.card-app{
+  max-width:700px;
+  margin:auto;
+  margin-top:30px;
+  background:#fffdf5;
+  border-radius:20px;
+  padding:20px;
+}
+
+.title{
+  text-align:center;
+  font-size:22px;
+  font-weight:bold;
+  color:#8b6f2f;
+}
+
+.score-box{
+  text-align:center;
+  font-size:28px;
+  font-weight:bold;
+  background:linear-gradient(45deg,#d4af37,#ffd700);
+  color:white;
+  padding:10px;
+  border-radius:15px;
+}
+
+.question{
+  background:white;
+  border-radius:15px;
+  padding:15px;
+  margin-bottom:12px;
+}
+
+.correct{ color:#2e7d32; font-weight:bold;}
+.wrong{ color:#c62828; }
+
+.progress{
+  height:18px;
+}
+
+.progress-bar{
+  background:#c9a227;
+}
+
+/* lịch sử scroll */
+#history{
+  max-height:200px;
+  overflow-y:auto;
+}
+
+/* submit cố định */
+.fixed-submit{
+  position:fixed;
+  bottom:10px;
+  left:50%;
+  transform:translateX(-50%);
+  width:90%;
+  max-width:700px;
+  z-index:999;
+}
+
+/* animation */
+.shake{
+  animation:shake 0.4s;
+}
+@keyframes shake{
+  0%{transform:translateX(0);}
+  25%{transform:translateX(-5px);}
+  50%{transform:translateX(5px);}
+  75%{transform:translateX(-5px);}
+}
 </style>
 </head>
 
 <body>
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-8">
-      <div class="card shadow">
-        <div class="card-body text-center">
-          <h4 class="text-center mb-3">Luyện nhớ Chú Đại Bi</h4>
 
-          <button id="startBtn" class="btn btn-primary btn-block mb-3" onclick="start()">Bắt đầu</button>
+<div class="card-app">
 
-          <div id="quiz" style="display:none">
-            <div class="question mb-3" id="question"></div>
-            <input id="answer" class="form-control" placeholder="Nhập đầy đủ câu..." onkeypress="handleKey(event)" />
-            <div id="status" class="status mt-2"></div>
-          </div>
+<div class="title">🪷 Luyện Chú Đại Bi</div>
 
-          <div id="result" class="mt-4"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+<select id="level" class="form-control mt-2">
+  <option value="easy">Dễ</option>
+  <option value="medium">Trung bình</option>
+  <option value="hard">Khó</option>
+</select>
+
+<button class="btn btn-warning btn-block mt-2" onclick="start()">🧘 Bắt đầu</button>
+
+<button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">📜 Xem lịch sử</button>
+
+<div class="progress mt-3">
+  <div id="progress" class="progress-bar" style="width:0%">0%</div>
 </div>
 
+<div id="quiz"></div>
+<div id="result"></div>
+
+<hr>
+<h6>📜 Lịch sử</h6>
+<div id="history"></div>
+
+</div>
+
+<!-- nút submit cố định -->
+<button id="submitFixed" class="btn btn-warning fixed-submit" style="display:none;" onclick="submit()">
+  📩 Nộp bài
+</button>
+
 <script>
-let sessionId = null;
+let sessionId=null;
+let questions=[];
 
-async function start() {
-  const btn = document.getElementById('startBtn');
-  btn.innerText = 'Làm lại bài mới';
-  btn.classList.remove('btn-primary');
-  btn.classList.add('btn-warning');
+// start
+async function start(){
+  document.getElementById('result').innerHTML='';
 
-  // Xóa kết quả cũ
-  document.getElementById('result').innerHTML = '';
+  const level=document.getElementById('level').value;
+  const res=await fetch(`/start?level=${level}`);
+  const data=await res.json();
 
-  const res = await fetch('/start');
-  const data = await res.json();
-  sessionId = data.sessionId;
+  sessionId=data.sessionId;
+  questions=data.questions;
 
-  document.getElementById('quiz').style.display = 'block';
-  nextQuestion();
+  render();
+
+  document.getElementById('submitFixed').style.display='block';
 }
 
-async function nextQuestion() {
-  const res = await fetch(`/question/${sessionId}`);
-  const data = await res.json();
+// render
+function render(){
+  let html='';
 
-  if (data.done) {
-    showResult(data.result);
-    return;
-  }
-
-  document.getElementById('question').innerText =
-    `Câu ${data.index}/${data.total}: ` + data.question;
-  document.getElementById('answer').value = '';
-  document.getElementById('status').innerText = '';
-}
-
-async function submitAnswer() {
-  const answer = document.getElementById('answer').value;
-
-  const res = await fetch('/answer', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, answer })
+  questions.forEach((q,i)=>{
+    html+=`
+      <div class="question">
+        <b>Câu ${i+1}:</b> ${q}
+        <input class="form-control mt-2 answer" oninput="updateProgress()">
+      </div>
+    `;
   });
 
-  const data = await res.json();
-  const statusEl = document.getElementById('status');
-
-  if (data.correct) {
-    statusEl.innerHTML = '✔ Đúng';
-    statusEl.className = 'status correct';
-  } else {
-    statusEl.innerHTML = `✘ Sai<br>Đáp án: ${data.correctAnswer}`;
-    statusEl.className = 'status wrong';
-  }
-
-  setTimeout(nextQuestion, 1200);
+  document.getElementById('quiz').innerHTML=html;
 }
 
-function handleKey(e) {
-  if (e.key === 'Enter') submitAnswer();
-}
+// progress
+function updateProgress(){
+  const inputs=document.querySelectorAll('.answer');
+  let filled=0;
 
-function showResult(result) {
-  let html = `<h5>Kết quả</h5>`;
-  html += `<p>Đúng: ${result.correct} | Sai: ${result.history.length - result.correct}</p>`;
-
-  html += `<div class="table-responsive"><table class="table table-bordered table-sm">
-    <thead class="thead-dark">
-      <tr>
-        <th>#</th>
-        <th>Câu đúng</th>
-        <th>Bạn nhập</th>
-        <th>KQ</th>
-      </tr>
-    </thead><tbody>`;
-
-  result.history.forEach((item, index) => {
-    html += `<tr>
-      <td>${index + 1}</td>
-      <td>${item.question}</td>
-      <td>${item.user}</td>
-      <td>${item.correct ? '✔' : '✘'}</td>
-    </tr>`;
+  inputs.forEach(i=>{
+    if(i.value.trim()!='') filled++;
   });
 
-  html += `</tbody></table></div>`;
-
-  document.getElementById('quiz').style.display = 'none';
-  document.getElementById('result').innerHTML = html;
+  const percent=Math.round((filled/inputs.length)*100);
+  document.getElementById('progress').style.width=percent+'%';
+  document.getElementById('progress').innerText=percent+'%';
 }
+
+// submit
+async function submit(){
+  const inputs=document.querySelectorAll('.answer');
+  let answers=[];
+
+  inputs.forEach(i=>answers.push(i.value));
+
+  const res=await fetch('/submit',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({sessionId,answers})
+  });
+
+  const data=await res.json();
+
+  document.getElementById('quiz').innerHTML='';
+  document.getElementById('submitFixed').style.display='none';
+
+  showResult(data);
+  saveHistory(data);
+
+  // 🔥 FIX SCROLL CHẮC CHẮN
+  setTimeout(()=>{
+    const el=document.getElementById('scoreBox');
+    if(el){
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },100);
+}
+
+// result
+function showResult(data){
+  let html=`<div id="scoreBox" class="score-box">🏆 ${data.score.toFixed(2)}/10</div>`;
+
+  data.results.forEach((r,i)=>{
+    if(r.correct){
+      html+=`<div class="question correct">✔ ${r.correctAnswer}</div>`;
+    }else{
+      html+=`
+        <div class="question wrong shake">
+          ❌ ${compareWords(r.userAnswer,r.correctAnswer)}
+          <div class="correct mt-1">✔ ${r.correctAnswer}</div>
+        </div>
+      `;
+    }
+  });
+
+  document.getElementById('result').innerHTML=html;
+
+  if(data.score>=8){
+    confetti({particleCount:150,spread:70});
+  }
+}
+
+// compare
+function compareWords(user, correct){
+  const u=user.split(' ');
+  const c=correct.split(' ');
+
+  return c.map((w,i)=>{
+    return (u[i]||'').toLowerCase()===w.toLowerCase()
+      ? `<span class="correct">${w}</span>`
+      : `<span class="wrong">${u[i]||'___'}</span>`;
+  }).join(' ');
+}
+
+// history
+function saveHistory(data){
+  let h=JSON.parse(localStorage.getItem('history')||'[]');
+
+  h.unshift({
+    score:data.score.toFixed(2),
+    time:new Date().toLocaleString()
+  });
+
+  localStorage.setItem('history',JSON.stringify(h));
+  renderHistory();
+}
+
+function renderHistory(){
+  let h=JSON.parse(localStorage.getItem('history')||'[]');
+
+  let html='';
+  h.slice(0,5).forEach(i=>{
+    html+=`<div>🏆 ${i.score}/10 - ${i.time}</div>`;
+  });
+
+  document.getElementById('history').innerHTML=html;
+}
+
+// scroll lịch sử
+function scrollToHistory(){
+  document.getElementById('history').scrollIntoView({behavior:'smooth'});
+}
+
+renderHistory();
 </script>
 
 </body>
