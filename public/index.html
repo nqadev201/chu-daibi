@@ -12,9 +12,8 @@
 <style>
 body{
   background:
-    linear-gradient(rgba(255,248,220,0.85), rgba(255,248,220,0.85)),
+    linear-gradient(rgba(255,248,220,0.9), rgba(255,248,220,0.9)),
     url('https://cdn.pixabay.com/photo/2017/08/06/00/38/buddha-2587866_1280.jpg');
-  background-size: cover;
 }
 
 .card-app{
@@ -26,19 +25,22 @@ body{
   border-radius:20px;
 }
 
-.title{
-  text-align:center;
-  font-weight:bold;
-  color:#8b6f2f;
+.word{
+  padding:3px 6px;
+  margin:2px;
+  display:inline-block;
+  border-radius:5px;
 }
 
-.score-box{
-  text-align:center;
-  font-size:28px;
-  font-weight:bold;
-  background:gold;
-  padding:10px;
-  border-radius:10px;
+.word.correct{
+  background:#e8f5e9;
+  color:#2e7d32;
+}
+
+.word.wrong{
+  background:#ffebee;
+  border:1px solid #c62828;
+  color:#c62828;
 }
 
 .question{
@@ -47,9 +49,6 @@ body{
   margin-bottom:10px;
   border-radius:10px;
 }
-
-.correct{color:green;font-weight:bold;}
-.wrong{color:red;}
 
 #history{
   max-height:200px;
@@ -62,17 +61,8 @@ body{
   left:50%;
   transform:translateX(-50%);
   width:90%;
-  max-width:700px;
 }
 
-.shake{
-  animation:shake 0.4s;
-}
-@keyframes shake{
-  0%{transform:translateX(0);}
-  25%{transform:translateX(-5px);}
-  50%{transform:translateX(5px);}
-}
 </style>
 </head>
 
@@ -80,12 +70,12 @@ body{
 
 <div class="card-app">
 
-<div class="title">🪷 Luyện Kinh</div>
+<h5 class="text-center">🪷 Luyện Kinh</h5>
 
-<div class="d-flex mt-2">
+<div class="d-flex">
   <select id="type" class="form-control mr-2">
     <option value="daibi">Chú Đại Bi</option>
-    <option value="batnha">Bát Nhã Tâm Kinh</option>
+    <option value="batnha">Bát Nhã</option>
   </select>
 
   <select id="level" class="form-control">
@@ -170,12 +160,12 @@ function showResult(data){
 
   data.results.forEach(r=>{
     if(r.correct){
-      html+=`<div class="question correct">${r.correctAnswer}</div>`;
+      html+=`<div class="question">✔ ${r.correctAnswer}</div>`;
     }else{
       html+=`
-        <div class="question wrong shake">
-          ${compareWords(r.userAnswer,r.correctAnswer)}
-          <div class="correct">${r.correctAnswer}</div>
+        <div class="question">
+          ❌ ${highlightWords(r.userAnswer,r.correctAnswer)}
+          <div style="color:green;margin-top:5px;">✔ ${r.correctAnswer}</div>
         </div>
       `;
     }
@@ -188,14 +178,15 @@ function showResult(data){
   }
 }
 
-function compareWords(u,c){
-  u=u.split(' ');
-  c=c.split(' ');
+function highlightWords(user, correct){
+  const u=user.split(' ');
+  const c=correct.split(' ');
 
   return c.map((w,i)=>{
-    return (u[i]||'').toLowerCase()===w.toLowerCase()
-      ? `<span class="correct">${w}</span>`
-      : `<span class="wrong">${u[i]||'___'}</span>`;
+    const userWord=u[i]||'';
+    const isSame=userWord.toLowerCase()===w.toLowerCase();
+
+    return `<span class="word ${isSame?'correct':'wrong'}">${userWord||'___'}</span>`;
   }).join(' ');
 }
 
