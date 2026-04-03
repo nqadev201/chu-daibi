@@ -8,13 +8,13 @@
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
 body{
   background:
-    linear-gradient(rgba(255,248,220,0.9), rgba(255,248,220,0.9)),
+    linear-gradient(rgba(255,248,220,0.85), rgba(255,248,220,0.85)),
     url('https://cdn.pixabay.com/photo/2017/08/06/00/38/buddha-2587866_1280.jpg');
+  background-size: cover;
 }
 
 .card-app{
@@ -26,17 +26,34 @@ body{
   border-radius:20px;
 }
 
-.compare-row{display:flex;flex-wrap:wrap;}
-.word-box{min-width:40px;text-align:center;padding:4px;margin:2px;border-radius:6px;}
-.word-correct{background:#e8f5e9;color:#2e7d32;}
-.word-wrong{background:#ffebee;border:1px solid red;color:red;}
-.word-answer{color:green;font-weight:bold;}
+.title{
+  text-align:center;
+  font-weight:bold;
+  color:#8b6f2f;
+}
+
+.score-box{
+  text-align:center;
+  font-size:28px;
+  font-weight:bold;
+  background:gold;
+  padding:10px;
+  border-radius:10px;
+}
 
 .question{
   background:white;
-  padding:10px;
-  border-radius:10px;
+  padding:12px;
   margin-bottom:10px;
+  border-radius:10px;
+}
+
+.correct{color:green;font-weight:bold;}
+.wrong{color:red;}
+
+#history{
+  max-height:200px;
+  overflow-y:auto;
 }
 
 .fixed-submit{
@@ -45,26 +62,16 @@ body{
   left:50%;
   transform:translateX(-50%);
   width:90%;
+  max-width:700px;
 }
 
-.history-box{
-  max-height:250px;
-  overflow-y:auto;
+.shake{
+  animation:shake 0.4s;
 }
-
-.history-item{
-  background:#fff;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:10px;
-  border-left:5px solid gold;
-  cursor:pointer;
-}
-
-.score{
-  font-size:20px;
-  font-weight:bold;
-  color:#d4af37;
+@keyframes shake{
+  0%{transform:translateX(0);}
+  25%{transform:translateX(-5px);}
+  50%{transform:translateX(5px);}
 }
 </style>
 </head>
@@ -73,12 +80,12 @@ body{
 
 <div class="card-app">
 
-<h5 class="text-center">🪷 Luyện Kinh</h5>
+<div class="title">🪷 Luyện Kinh</div>
 
-<div class="d-flex">
+<div class="d-flex mt-2">
   <select id="type" class="form-control mr-2">
     <option value="daibi">Chú Đại Bi</option>
-    <option value="batnha">Bát Nhã</option>
+    <option value="batnha">Bát Nhã Tâm Kinh</option>
   </select>
 
   <select id="level" class="form-control">
@@ -88,69 +95,39 @@ body{
   </select>
 </div>
 
-<button class="btn btn-warning btn-block mt-2" onclick="start()">🔄 Làm bài mới</button>
-<button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">📜 Xem lịch sử</button>
+<button class="btn btn-warning btn-block mt-2" onclick="start()">Bắt đầu</button>
+<button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">Xem lịch sử</button>
 
 <div id="quiz"></div>
 <div id="result"></div>
 
 <hr>
-
-<h5>📊 Lịch sử</h5>
-<div id="history" class="history-box"></div>
+<div id="history"></div>
 
 </div>
 
 <button id="submitFixed" class="btn btn-warning fixed-submit" style="display:none;" onclick="submit()">Nộp bài</button>
 
-<!-- MODAL -->
-<div class="modal fade" id="historyModal">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5>📜 Chi tiết bài làm</h5>
-        <button class="close" data-dismiss="modal">&times;</button>
-      </div>
-      <div class="modal-body" id="modalBody"></div>
-    </div>
-  </div>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-let sessionId, questions;
-let lastResult = null;
+let sessionId=null;
+let questions=[];
 
-// ===== START =====
 async function start(){
-
-  // 👉 lưu bài cũ khi bắt đầu bài mới
-  if(lastResult){
-    saveHistory(lastResult);
-    lastResult = null;
-  }
-
   document.getElementById('result').innerHTML='';
-  document.getElementById('quiz').innerHTML='';
 
-  const level = document.getElementById('level').value;
-  const type = document.getElementById('type').value;
+  const level=document.getElementById('level').value;
+  const type=document.getElementById('type').value;
 
-  const res = await fetch(`/start?level=${level}&type=${type}`);
-  const data = await res.json();
+  const res=await fetch(`/start?level=${level}&type=${type}`);
+  const data=await res.json();
 
-  sessionId = data.sessionId;
-  questions = data.questions;
+  sessionId=data.sessionId;
+  questions=data.questions;
 
   render();
   document.getElementById('submitFixed').style.display='block';
-
-  window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ===== RENDER =====
 function render(){
   let html='';
   questions.forEach((q,i)=>{
@@ -164,7 +141,6 @@ function render(){
   document.getElementById('quiz').innerHTML=html;
 }
 
-// ===== SUBMIT =====
 async function submit(){
   const inputs=document.querySelectorAll('.answer');
   let answers=[];
@@ -178,70 +154,57 @@ async function submit(){
 
   const data=await res.json();
 
-  lastResult = data;
-
-  showInlineResult(data);
-
+  document.getElementById('quiz').innerHTML='';
   document.getElementById('submitFixed').style.display='none';
+
+  showResult(data);
+  saveHistory(data);
 
   setTimeout(()=>{
     document.getElementById('scoreBox').scrollIntoView({behavior:'smooth'});
   },100);
 }
 
-// ===== INLINE RESULT =====
-function showInlineResult(data){
-  let html=`<div id="scoreBox" style="font-size:28px;text-align:center;color:gold;">🏆 ${data.score.toFixed(2)}/10</div>`;
+function showResult(data){
+  let html=`<div id="scoreBox" class="score-box">🏆 ${data.score.toFixed(2)}/10</div>`;
 
   data.results.forEach(r=>{
     if(r.correct){
-      html+=`<div class="question">✔ ${r.correctAnswer}</div>`;
+      html+=`<div class="question correct">${r.correctAnswer}</div>`;
     }else{
-      html+=`<div class="question">❌ ${highlightWords(r.userAnswer,r.correctAnswer)}</div>`;
+      html+=`
+        <div class="question wrong shake">
+          ${compareWords(r.userAnswer,r.correctAnswer)}
+          <div class="correct">${r.correctAnswer}</div>
+        </div>
+      `;
     }
   });
 
   document.getElementById('result').innerHTML=html;
 
   if(data.score>=8){
-    confetti({particleCount:150});
+    confetti({particleCount:150,spread:70});
   }
 }
 
-// ===== WORD COMPARE =====
-function highlightWords(user, correct){
-  const u=user.split(' ');
-  const c=correct.split(' ');
-  let userRow='', correctRow='';
+function compareWords(u,c){
+  u=u.split(' ');
+  c=c.split(' ');
 
-  c.forEach((w,i)=>{
-    const uw=u[i]||'';
-    const same=uw.toLowerCase()===w.toLowerCase();
-
-    userRow+=`<div class="word-box ${same?'word-correct':'word-wrong'}">${uw||'___'}</div>`;
-    correctRow+=`<div class="word-box word-answer">${w}</div>`;
-  });
-
-  return `<div class="compare-row">${userRow}</div><div class="compare-row">${correctRow}</div>`;
+  return c.map((w,i)=>{
+    return (u[i]||'').toLowerCase()===w.toLowerCase()
+      ? `<span class="correct">${w}</span>`
+      : `<span class="wrong">${u[i]||'___'}</span>`;
+  }).join(' ');
 }
 
-// ===== HISTORY =====
 function saveHistory(data){
   let h=JSON.parse(localStorage.getItem('history')||'[]');
-  let stats=JSON.parse(localStorage.getItem('stats')||'{}');
-
-  data.results.forEach(r=>{
-    if(!r.correct){
-      stats[r.correctAnswer]=(stats[r.correctAnswer]||0)+1;
-    }
-  });
-
-  localStorage.setItem('stats',JSON.stringify(stats));
 
   h.unshift({
     score:data.score.toFixed(2),
-    time:new Date().toLocaleString(),
-    results:data.results
+    time:new Date().toLocaleString()
   });
 
   localStorage.setItem('history',JSON.stringify(h));
@@ -252,59 +215,11 @@ function renderHistory(){
   let h=JSON.parse(localStorage.getItem('history')||'[]');
 
   let html='';
-  h.slice(0,10).forEach((i,index)=>{
-    html+=`
-      <div class="history-item" onclick="openHistory(${index})">
-        <div class="score">🏆 ${i.score}/10</div>
-        <div>🕒 ${i.time}</div>
-      </div>
-    `;
+  h.slice(0,10).forEach(i=>{
+    html+=`<div>🏆 ${i.score} - ${i.time}</div>`;
   });
 
   document.getElementById('history').innerHTML=html;
-}
-
-// ===== POPUP =====
-function openHistory(index){
-  let h=JSON.parse(localStorage.getItem('history')||'[]');
-  let stats=JSON.parse(localStorage.getItem('stats')||'{}');
-  let item=h[index];
-
-  let html=`<div id="exportArea"><h4>🏆 ${item.score}/10</h4>
-  <input class="form-control mb-2" id="username" placeholder="Nhập họ tên...">`;
-
-  item.results.forEach(r=>{
-    if(r.correct){
-      html+=`<div class="question">✔ ${r.correctAnswer}</div>`;
-    }else{
-      html+=`<div class="question">❌ ${highlightWords(r.userAnswer,r.correctAnswer)}</div>`;
-    }
-  });
-
-  let top=Object.entries(stats).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
-  html+=`<hr><h5>❗ Sai nhiều nhất</h5>`;
-  top.forEach(t=>{
-    html+=`<div>🔴 ${t[0]} (${t[1]} lần)</div>`;
-  });
-
-  html+=`</div>
-  <button class="btn btn-success mt-3" onclick="downloadImage()">📸 Lưu ảnh</button>`;
-
-  document.getElementById('modalBody').innerHTML=html;
-  $('#historyModal').modal('show');
-}
-
-// ===== EXPORT IMAGE =====
-function downloadImage(){
-  const name=document.getElementById('username').value||'user';
-
-  html2canvas(document.getElementById('exportArea')).then(canvas=>{
-    const link=document.createElement('a');
-    link.download=`ket-qua-${name}.png`;
-    link.href=canvas.toDataURL();
-    link.click();
-  });
 }
 
 function scrollToHistory(){
