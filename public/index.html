@@ -25,34 +25,40 @@ body{
   border-radius:20px;
 }
 
-.word{
-  padding:3px 6px;
-  margin:2px;
-  display:inline-block;
-  border-radius:5px;
+.compare-row{
+  display:flex;
+  flex-wrap:wrap;
 }
 
-.word.correct{
+.word-box{
+  min-width:40px;
+  text-align:center;
+  padding:4px;
+  margin:2px;
+  border-radius:6px;
+}
+
+.word-correct{
   background:#e8f5e9;
   color:#2e7d32;
 }
 
-.word.wrong{
+.word-wrong{
   background:#ffebee;
-  border:1px solid #c62828;
-  color:#c62828;
+  border:1px solid red;
+  color:red;
+}
+
+.word-answer{
+  color:green;
+  font-weight:bold;
 }
 
 .question{
   background:white;
-  padding:12px;
-  margin-bottom:10px;
+  padding:10px;
   border-radius:10px;
-}
-
-#history{
-  max-height:200px;
-  overflow-y:auto;
+  margin-bottom:10px;
 }
 
 .fixed-submit{
@@ -62,7 +68,6 @@ body{
   transform:translateX(-50%);
   width:90%;
 }
-
 </style>
 </head>
 
@@ -86,13 +91,9 @@ body{
 </div>
 
 <button class="btn btn-warning btn-block mt-2" onclick="start()">Bắt đầu</button>
-<button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">Xem lịch sử</button>
 
 <div id="quiz"></div>
 <div id="result"></div>
-
-<hr>
-<div id="history"></div>
 
 </div>
 
@@ -103,8 +104,6 @@ let sessionId=null;
 let questions=[];
 
 async function start(){
-  document.getElementById('result').innerHTML='';
-
   const level=document.getElementById('level').value;
   const type=document.getElementById('type').value;
 
@@ -148,7 +147,6 @@ async function submit(){
   document.getElementById('submitFixed').style.display='none';
 
   showResult(data);
-  saveHistory(data);
 
   setTimeout(()=>{
     document.getElementById('scoreBox').scrollIntoView({behavior:'smooth'});
@@ -156,7 +154,7 @@ async function submit(){
 }
 
 function showResult(data){
-  let html=`<div id="scoreBox" class="score-box">🏆 ${data.score.toFixed(2)}/10</div>`;
+  let html=`<div id="scoreBox" style="font-size:28px;text-align:center;color:gold;">🏆 ${data.score.toFixed(2)}/10</div>`;
 
   data.results.forEach(r=>{
     if(r.correct){
@@ -165,7 +163,6 @@ function showResult(data){
       html+=`
         <div class="question">
           ❌ ${highlightWords(r.userAnswer,r.correctAnswer)}
-          <div style="color:green;margin-top:5px;">✔ ${r.correctAnswer}</div>
         </div>
       `;
     }
@@ -174,7 +171,7 @@ function showResult(data){
   document.getElementById('result').innerHTML=html;
 
   if(data.score>=8){
-    confetti({particleCount:150,spread:70});
+    confetti({particleCount:150});
   }
 }
 
@@ -182,42 +179,22 @@ function highlightWords(user, correct){
   const u=user.split(' ');
   const c=correct.split(' ');
 
-  return c.map((w,i)=>{
-    const userWord=u[i]||'';
-    const isSame=userWord.toLowerCase()===w.toLowerCase();
+  let userRow='';
+  let correctRow='';
 
-    return `<span class="word ${isSame?'correct':'wrong'}">${userWord||'___'}</span>`;
-  }).join(' ');
-}
+  c.forEach((w,i)=>{
+    const uw=u[i]||'';
+    const same=uw.toLowerCase()===w.toLowerCase();
 
-function saveHistory(data){
-  let h=JSON.parse(localStorage.getItem('history')||'[]');
-
-  h.unshift({
-    score:data.score.toFixed(2),
-    time:new Date().toLocaleString()
+    userRow+=`<div class="word-box ${same?'word-correct':'word-wrong'}">${uw||'___'}</div>`;
+    correctRow+=`<div class="word-box word-answer">${w}</div>`;
   });
 
-  localStorage.setItem('history',JSON.stringify(h));
-  renderHistory();
+  return `
+    <div class="compare-row">${userRow}</div>
+    <div class="compare-row">${correctRow}</div>
+  `;
 }
-
-function renderHistory(){
-  let h=JSON.parse(localStorage.getItem('history')||'[]');
-
-  let html='';
-  h.slice(0,10).forEach(i=>{
-    html+=`<div>🏆 ${i.score} - ${i.time}</div>`;
-  });
-
-  document.getElementById('history').innerHTML=html;
-}
-
-function scrollToHistory(){
-  document.getElementById('history').scrollIntoView({behavior:'smooth'});
-}
-
-renderHistory();
 </script>
 
 </body>
