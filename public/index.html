@@ -120,10 +120,18 @@ body{
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// ===== JS =====
 let sessionId, questions;
+let lastResult = null;
 
+// ===== START =====
 async function start(){
+
+  // 👉 lưu bài cũ khi bắt đầu bài mới
+  if(lastResult){
+    saveHistory(lastResult);
+    lastResult = null;
+  }
+
   document.getElementById('result').innerHTML='';
   document.getElementById('quiz').innerHTML='';
 
@@ -142,6 +150,7 @@ async function start(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// ===== RENDER =====
 function render(){
   let html='';
   questions.forEach((q,i)=>{
@@ -155,6 +164,7 @@ function render(){
   document.getElementById('quiz').innerHTML=html;
 }
 
+// ===== SUBMIT =====
 async function submit(){
   const inputs=document.querySelectorAll('.answer');
   let answers=[];
@@ -168,22 +178,37 @@ async function submit(){
 
   const data=await res.json();
 
-  document.getElementById('quiz').innerHTML='';
-  document.getElementById('submitFixed').style.display='none';
+  lastResult = data;
 
-  showResult(data);
-  saveHistory(data);
+  showInlineResult(data);
+
+  document.getElementById('submitFixed').style.display='none';
 
   setTimeout(()=>{
     document.getElementById('scoreBox').scrollIntoView({behavior:'smooth'});
   },100);
 }
 
-function showResult(data){
+// ===== INLINE RESULT =====
+function showInlineResult(data){
   let html=`<div id="scoreBox" style="font-size:28px;text-align:center;color:gold;">🏆 ${data.score.toFixed(2)}/10</div>`;
+
+  data.results.forEach(r=>{
+    if(r.correct){
+      html+=`<div class="question">✔ ${r.correctAnswer}</div>`;
+    }else{
+      html+=`<div class="question">❌ ${highlightWords(r.userAnswer,r.correctAnswer)}</div>`;
+    }
+  });
+
   document.getElementById('result').innerHTML=html;
+
+  if(data.score>=8){
+    confetti({particleCount:150});
+  }
 }
 
+// ===== WORD COMPARE =====
 function highlightWords(user, correct){
   const u=user.split(' ');
   const c=correct.split(' ');
@@ -239,6 +264,7 @@ function renderHistory(){
   document.getElementById('history').innerHTML=html;
 }
 
+// ===== POPUP =====
 function openHistory(index){
   let h=JSON.parse(localStorage.getItem('history')||'[]');
   let stats=JSON.parse(localStorage.getItem('stats')||'{}');
@@ -269,6 +295,7 @@ function openHistory(index){
   $('#historyModal').modal('show');
 }
 
+// ===== EXPORT IMAGE =====
 function downloadImage(){
   const name=document.getElementById('username').value||'user';
 
