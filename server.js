@@ -9,7 +9,7 @@ app.use(express.static('public'));
 
 // ===== DATA =====
 const chuDaiBi = [
- "Nam Mô Đại Bi Hội Thượng Phật Bồ Tát",
+"Nam Mô Đại Bi Hội Thượng Phật Bồ Tát",
   "Thiên Thủ Thiên Nhãn Vô Ngại Đại Bi Tâm Đà La Ni",
   "Nam Mô Hắc Ra Đát Na Đa Ra Dạ Da",
   "Nam Mô A Rị Da",
