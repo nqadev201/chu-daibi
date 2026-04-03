@@ -68,6 +68,26 @@ body{
   transform:translateX(-50%);
   width:90%;
 }
+
+/* ===== HISTORY ===== */
+.history-box{
+  max-height:250px;
+  overflow-y:auto;
+}
+
+.history-item{
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:10px;
+  border-left:5px solid gold;
+}
+
+.score{
+  font-size:20px;
+  font-weight:bold;
+  color:#d4af37;
+}
 </style>
 </head>
 
@@ -91,9 +111,15 @@ body{
 </div>
 
 <button class="btn btn-warning btn-block mt-2" onclick="start()">Bắt đầu</button>
+<button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">📜 Xem lịch sử</button>
 
 <div id="quiz"></div>
 <div id="result"></div>
+
+<hr>
+
+<h5>📊 Lịch sử</h5>
+<div id="history" class="history-box"></div>
 
 </div>
 
@@ -147,6 +173,7 @@ async function submit(){
   document.getElementById('submitFixed').style.display='none';
 
   showResult(data);
+  saveHistory(data);
 
   setTimeout(()=>{
     document.getElementById('scoreBox').scrollIntoView({behavior:'smooth'});
@@ -195,6 +222,41 @@ function highlightWords(user, correct){
     <div class="compare-row">${correctRow}</div>
   `;
 }
+
+// ===== HISTORY =====
+function saveHistory(data){
+  let h=JSON.parse(localStorage.getItem('history')||'[]');
+
+  h.unshift({
+    score:data.score.toFixed(2),
+    time:new Date().toLocaleString()
+  });
+
+  localStorage.setItem('history',JSON.stringify(h));
+  renderHistory();
+}
+
+function renderHistory(){
+  let h=JSON.parse(localStorage.getItem('history')||'[]');
+
+  let html='';
+  h.slice(0,10).forEach(i=>{
+    html+=`
+      <div class="history-item">
+        <div class="score">🏆 ${i.score}/10</div>
+        <div>🕒 ${i.time}</div>
+      </div>
+    `;
+  });
+
+  document.getElementById('history').innerHTML=html;
+}
+
+function scrollToHistory(){
+  document.getElementById('history').scrollIntoView({behavior:'smooth'});
+}
+
+renderHistory();
 </script>
 
 </body>
