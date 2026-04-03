@@ -7,8 +7,11 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-const cauChuDaiBi = [
-  "Nam Mô Đại Bi Hội Thượng Phật Bồ Tát",
+// ===== DATA =====
+
+// CHÚ ĐẠI BI
+const chuDaiBi = [
+ "Nam Mô Đại Bi Hội Thượng Phật Bồ Tát",
   "Thiên Thủ Thiên Nhãn Vô Ngại Đại Bi Tâm Đà La Ni",
   "Nam Mô Hắc Ra Đát Na Đa Ra Dạ Da",
   "Nam Mô A Rị Da",
@@ -18,7 +21,7 @@ const cauChuDaiBi = [
   "Ma Ha Ca Lô Ni Ca Da",
   "Án",
   "Tát Bàn Ra Phạt Duệ",
-  "Số Đát Na Đát Tỏa",
+  "Số Đát Na Đát Toả",
   "Nam Mô Tất Kiết Lật Đoả Y Mông A Rị Da",
   "Bà Lô Kiết Đế Thất Phật Ra Lăng Đà Bà",
   "Nam Mô Na Ra Cẩn Trì",
@@ -96,7 +99,62 @@ const cauChuDaiBi = [
   "Ta Bà Ha"
 ];
 
-// normalize
+// BÁT NHÃ TÂM KINH (dạng mảng)
+const batNha = [
+  "Quán Tự Tại Bồ Tát Hành Thâm Bát Nhã Ba La Mật Đa Thời",
+  "Chiếu Kiến Ngũ Uẩn Giai Không",
+  "Độ Nhứt Thiết Khổ Ách",
+  "Xá Lợi Tử",
+  "Sắc Bất Dị Không",
+  "Không Bất Dị Sắc",
+  "Sắc Tức Thị Không",
+  "Không Tức Thị Sắc",
+  "Thọ Tưởng Hành Thức Diệc Phục Như Thị",
+  "Xá Lợi Tử",
+  "Thị Chư Pháp Không Tướng",
+  "Bất Sanh Bất Diệt",
+  "Bất Cấu Bất Tịnh",
+  "Bất Tăng Bất Giảm",
+  "Thị Cố Không Trung Vô Sắc",
+  "Vô Thọ Tưởng Hành Thức",
+  "Vô Nhãn Nhĩ Tỷ Thiệt Thân Ý",
+  "Vô Sắc Thanh Hương Vị Xúc Pháp",
+  "Vô Nhãn Giới Nãi Chí Vô Ý Thức Giới",
+  "Vô Vô Minh",
+  "Diệc Vô Vô Minh Tận",
+  "Nãi Chí Vô Lão Tử",
+  "Diệc Vô Lão Tử Tận",
+  "Vô Khổ",
+  "Tập",
+  "Diệt",
+  "Đạo",
+  "Vô Trí Diệc Vô Đắc",
+  "Dĩ Vô Sở Đắc Cố",
+  "Bồ Đề Tát Đõa Y Bát Nhã Ba La Mật Đa Cố",
+  "Tâm Vô Quái Ngại",
+  "Vô Quái Ngại Cố",
+  "Vô Hữu Khủng Bố",
+  "Viễn Ly Điên Đảo Mộng Tưởng",
+  "Cứu Cánh Niết Bàn",
+  "Tam Thế Chư Phật",
+  "Y Bát Nhã Ba La Mật Đa Cố",
+  "Đắc A Nậu Đa La Tam Miệu Tam Bồ Đề",
+  "Cố Tri Bát Nhã Ba La Mật Đa",
+  "Thị Đại Thần Chú",
+  "Thị Đại Minh Chú",
+  "Thị Vô Thượng Chú",
+  "Thị Vô Đẳng Đẳng Chú",
+  "Năng Trừ Nhất Thiết Khổ",
+  "Chân Thật Bất Hư",
+  "Cố Thuyết Bát Nhã Ba La Mật Đa Chú",
+  "Tức Thuyết Chú Viết",
+  "Yết Đế Yết Đế",
+  "Ba La Yết Đế",
+  "Ba La Tăng Yết Đế",
+  "Bồ Đề Tát Bà Ha"
+];
+
+// ===== NORMALIZE =====
 function normalizeText(str) {
   return str.toLowerCase()
     .normalize("NFD")
@@ -107,7 +165,7 @@ function normalizeText(str) {
     .trim();
 }
 
-// mask
+// ===== MASK =====
 function maskSentence(sentence, level) {
   let words = sentence.split(' ');
   let percent = level === 'medium' ? 0.5 : level === 'hard' ? 0.8 : 0.2;
@@ -122,22 +180,27 @@ function maskSentence(sentence, level) {
   return words.map((w, i) => indexes.includes(i) ? '_____' : w).join(' ');
 }
 
+// ===== SESSION =====
 let sessions = {};
 
 app.get('/start', (req, res) => {
   const level = req.query.level || 'easy';
+  const type = req.query.type || 'daibi';
+
   const id = Date.now().toString();
+  const data = type === 'batnha' ? batNha : chuDaiBi;
 
   sessions[id] = {
-    questions: [...cauChuDaiBi]
+    questions: [...data]
   };
 
   res.json({
     sessionId: id,
-    questions: cauChuDaiBi.map(q => maskSentence(q, level))
+    questions: data.map(q => maskSentence(q, level))
   });
 });
 
+// ===== SUBMIT =====
 app.post('/submit', (req, res) => {
   const { sessionId, answers } = req.body;
   const session = sessions[sessionId];
