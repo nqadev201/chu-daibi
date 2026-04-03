@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Luyện Chú Đại Bi</title>
+<title>Luyện Kinh</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -15,21 +15,19 @@ body{
     linear-gradient(rgba(255,248,220,0.85), rgba(255,248,220,0.85)),
     url('https://cdn.pixabay.com/photo/2017/08/06/00/38/buddha-2587866_1280.jpg');
   background-size: cover;
-  font-family: 'Segoe UI';
 }
 
 .card-app{
   max-width:700px;
   margin:auto;
-  margin-top:30px;
+  margin-top:20px;
   background:#fffdf5;
-  border-radius:20px;
   padding:20px;
+  border-radius:20px;
 }
 
 .title{
   text-align:center;
-  font-size:22px;
   font-weight:bold;
   color:#8b6f2f;
 }
@@ -38,37 +36,26 @@ body{
   text-align:center;
   font-size:28px;
   font-weight:bold;
-  background:linear-gradient(45deg,#d4af37,#ffd700);
-  color:white;
+  background:gold;
   padding:10px;
-  border-radius:15px;
+  border-radius:10px;
 }
 
 .question{
   background:white;
-  border-radius:15px;
-  padding:15px;
-  margin-bottom:12px;
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:10px;
 }
 
-.correct{ color:#2e7d32; font-weight:bold;}
-.wrong{ color:#c62828; }
+.correct{color:green;font-weight:bold;}
+.wrong{color:red;}
 
-.progress{
-  height:18px;
-}
-
-.progress-bar{
-  background:#c9a227;
-}
-
-/* lịch sử scroll */
 #history{
   max-height:200px;
   overflow-y:auto;
 }
 
-/* submit cố định */
 .fixed-submit{
   position:fixed;
   bottom:10px;
@@ -76,10 +63,8 @@ body{
   transform:translateX(-50%);
   width:90%;
   max-width:700px;
-  z-index:999;
 }
 
-/* animation */
 .shake{
   animation:shake 0.4s;
 }
@@ -87,7 +72,6 @@ body{
   0%{transform:translateX(0);}
   25%{transform:translateX(-5px);}
   50%{transform:translateX(5px);}
-  75%{transform:translateX(-5px);}
 }
 </style>
 </head>
@@ -96,91 +80,70 @@ body{
 
 <div class="card-app">
 
-<div class="title">🪷 Luyện Chú Đại Bi</div>
+<div class="title">🪷 Luyện Kinh</div>
 
-<select id="level" class="form-control mt-2">
-  <option value="easy">Dễ</option>
-  <option value="medium">Trung bình</option>
-  <option value="hard">Khó</option>
-</select>
+<div class="d-flex mt-2">
+  <select id="type" class="form-control mr-2">
+    <option value="daibi">Chú Đại Bi</option>
+    <option value="batnha">Bát Nhã Tâm Kinh</option>
+  </select>
 
-<button class="btn btn-warning btn-block mt-2" onclick="start()">🧘 Bắt đầu</button>
-
-<button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">📜 Xem lịch sử</button>
-
-<div class="progress mt-3">
-  <div id="progress" class="progress-bar" style="width:0%">0%</div>
+  <select id="level" class="form-control">
+    <option value="easy">Dễ</option>
+    <option value="medium">Trung bình</option>
+    <option value="hard">Khó</option>
+  </select>
 </div>
+
+<button class="btn btn-warning btn-block mt-2" onclick="start()">Bắt đầu</button>
+<button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">Xem lịch sử</button>
 
 <div id="quiz"></div>
 <div id="result"></div>
 
 <hr>
-<h6>📜 Lịch sử</h6>
 <div id="history"></div>
 
 </div>
 
-<!-- nút submit cố định -->
-<button id="submitFixed" class="btn btn-warning fixed-submit" style="display:none;" onclick="submit()">
-  📩 Nộp bài
-</button>
+<button id="submitFixed" class="btn btn-warning fixed-submit" style="display:none;" onclick="submit()">Nộp bài</button>
 
 <script>
 let sessionId=null;
 let questions=[];
 
-// start
 async function start(){
   document.getElementById('result').innerHTML='';
 
   const level=document.getElementById('level').value;
-  const res=await fetch(`/start?level=${level}`);
+  const type=document.getElementById('type').value;
+
+  const res=await fetch(`/start?level=${level}&type=${type}`);
   const data=await res.json();
 
   sessionId=data.sessionId;
   questions=data.questions;
 
   render();
-
   document.getElementById('submitFixed').style.display='block';
 }
 
-// render
 function render(){
   let html='';
-
   questions.forEach((q,i)=>{
     html+=`
       <div class="question">
         <b>Câu ${i+1}:</b> ${q}
-        <input class="form-control mt-2 answer" oninput="updateProgress()">
+        <input class="form-control mt-2 answer">
       </div>
     `;
   });
-
   document.getElementById('quiz').innerHTML=html;
 }
 
-// progress
-function updateProgress(){
-  const inputs=document.querySelectorAll('.answer');
-  let filled=0;
-
-  inputs.forEach(i=>{
-    if(i.value.trim()!='') filled++;
-  });
-
-  const percent=Math.round((filled/inputs.length)*100);
-  document.getElementById('progress').style.width=percent+'%';
-  document.getElementById('progress').innerText=percent+'%';
-}
-
-// submit
 async function submit(){
   const inputs=document.querySelectorAll('.answer');
   let answers=[];
-
   inputs.forEach(i=>answers.push(i.value));
 
   const res=await fetch('/submit',{
@@ -197,27 +160,22 @@ async function submit(){
   showResult(data);
   saveHistory(data);
 
-  // 🔥 FIX SCROLL CHẮC CHẮN
   setTimeout(()=>{
-    const el=document.getElementById('scoreBox');
-    if(el){
-      el.scrollIntoView({behavior:'smooth',block:'center'});
-    }
+    document.getElementById('scoreBox').scrollIntoView({behavior:'smooth'});
   },100);
 }
 
-// result
 function showResult(data){
   let html=`<div id="scoreBox" class="score-box">🏆 ${data.score.toFixed(2)}/10</div>`;
 
-  data.results.forEach((r,i)=>{
+  data.results.forEach(r=>{
     if(r.correct){
-      html+=`<div class="question correct">✔ ${r.correctAnswer}</div>`;
+      html+=`<div class="question correct">${r.correctAnswer}</div>`;
     }else{
       html+=`
         <div class="question wrong shake">
-          ❌ ${compareWords(r.userAnswer,r.correctAnswer)}
-          <div class="correct mt-1">✔ ${r.correctAnswer}</div>
+          ${compareWords(r.userAnswer,r.correctAnswer)}
+          <div class="correct">${r.correctAnswer}</div>
         </div>
       `;
     }
@@ -230,10 +188,9 @@ function showResult(data){
   }
 }
 
-// compare
-function compareWords(user, correct){
-  const u=user.split(' ');
-  const c=correct.split(' ');
+function compareWords(u,c){
+  u=u.split(' ');
+  c=c.split(' ');
 
   return c.map((w,i)=>{
     return (u[i]||'').toLowerCase()===w.toLowerCase()
@@ -242,7 +199,6 @@ function compareWords(user, correct){
   }).join(' ');
 }
 
-// history
 function saveHistory(data){
   let h=JSON.parse(localStorage.getItem('history')||'[]');
 
@@ -259,14 +215,13 @@ function renderHistory(){
   let h=JSON.parse(localStorage.getItem('history')||'[]');
 
   let html='';
-  h.slice(0,5).forEach(i=>{
-    html+=`<div>🏆 ${i.score}/10 - ${i.time}</div>`;
+  h.slice(0,10).forEach(i=>{
+    html+=`<div>🏆 ${i.score} - ${i.time}</div>`;
   });
 
   document.getElementById('history').innerHTML=html;
 }
 
-// scroll lịch sử
 function scrollToHistory(){
   document.getElementById('history').scrollIntoView({behavior:'smooth'});
 }
