@@ -8,8 +8,6 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 
 // ===== DATA =====
-
-// CHÚ ĐẠI BI
 const chuDaiBi = [
  "Nam Mô Đại Bi Hội Thượng Phật Bồ Tát",
   "Thiên Thủ Thiên Nhãn Vô Ngại Đại Bi Tâm Đà La Ni",
@@ -99,7 +97,6 @@ const chuDaiBi = [
   "Ta Bà Ha"
 ];
 
-// BÁT NHÃ TÂM KINH (dạng mảng)
 const batNha = [
   "Quán Tự Tại Bồ Tát Hành Thâm Bát Nhã Ba La Mật Đa Thời",
   "Chiếu Kiến Ngũ Uẩn Giai Không",
@@ -190,9 +187,7 @@ app.get('/start', (req, res) => {
   const id = Date.now().toString();
   const data = type === 'batnha' ? batNha : chuDaiBi;
 
-  sessions[id] = {
-    questions: [...data]
-  };
+  sessions[id] = { questions: [...data] };
 
   res.json({
     sessionId: id,
