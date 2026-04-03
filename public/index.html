@@ -8,6 +8,7 @@
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
 body{
@@ -25,34 +26,11 @@ body{
   border-radius:20px;
 }
 
-.compare-row{
-  display:flex;
-  flex-wrap:wrap;
-}
-
-.word-box{
-  min-width:40px;
-  text-align:center;
-  padding:4px;
-  margin:2px;
-  border-radius:6px;
-}
-
-.word-correct{
-  background:#e8f5e9;
-  color:#2e7d32;
-}
-
-.word-wrong{
-  background:#ffebee;
-  border:1px solid red;
-  color:red;
-}
-
-.word-answer{
-  color:green;
-  font-weight:bold;
-}
+.compare-row{display:flex;flex-wrap:wrap;}
+.word-box{min-width:40px;text-align:center;padding:4px;margin:2px;border-radius:6px;}
+.word-correct{background:#e8f5e9;color:#2e7d32;}
+.word-wrong{background:#ffebee;border:1px solid red;color:red;}
+.word-answer{color:green;font-weight:bold;}
 
 .question{
   background:white;
@@ -69,7 +47,6 @@ body{
   width:90%;
 }
 
-/* ===== HISTORY ===== */
 .history-box{
   max-height:250px;
   overflow-y:auto;
@@ -81,6 +58,7 @@ body{
   border-radius:10px;
   margin-bottom:10px;
   border-left:5px solid gold;
+  cursor:pointer;
 }
 
 .score{
@@ -110,7 +88,7 @@ body{
   </select>
 </div>
 
-<button class="btn btn-warning btn-block mt-2" onclick="start()">Bắt đầu</button>
+<button class="btn btn-warning btn-block mt-2" onclick="start()">🔄 Làm bài mới</button>
 <button class="btn btn-secondary btn-block mt-2" onclick="scrollToHistory()">📜 Xem lịch sử</button>
 
 <div id="quiz"></div>
@@ -125,22 +103,43 @@ body{
 
 <button id="submitFixed" class="btn btn-warning fixed-submit" style="display:none;" onclick="submit()">Nộp bài</button>
 
+<!-- MODAL -->
+<div class="modal fade" id="historyModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>📜 Chi tiết bài làm</h5>
+        <button class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-let sessionId=null;
-let questions=[];
+// ===== JS =====
+let sessionId, questions;
 
 async function start(){
-  const level=document.getElementById('level').value;
-  const type=document.getElementById('type').value;
+  document.getElementById('result').innerHTML='';
+  document.getElementById('quiz').innerHTML='';
 
-  const res=await fetch(`/start?level=${level}&type=${type}`);
-  const data=await res.json();
+  const level = document.getElementById('level').value;
+  const type = document.getElementById('type').value;
 
-  sessionId=data.sessionId;
-  questions=data.questions;
+  const res = await fetch(`/start?level=${level}&type=${type}`);
+  const data = await res.json();
+
+  sessionId = data.sessionId;
+  questions = data.questions;
 
   render();
   document.getElementById('submitFixed').style.display='block';
+
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function render(){
@@ -182,32 +181,13 @@ async function submit(){
 
 function showResult(data){
   let html=`<div id="scoreBox" style="font-size:28px;text-align:center;color:gold;">🏆 ${data.score.toFixed(2)}/10</div>`;
-
-  data.results.forEach(r=>{
-    if(r.correct){
-      html+=`<div class="question">✔ ${r.correctAnswer}</div>`;
-    }else{
-      html+=`
-        <div class="question">
-          ❌ ${highlightWords(r.userAnswer,r.correctAnswer)}
-        </div>
-      `;
-    }
-  });
-
   document.getElementById('result').innerHTML=html;
-
-  if(data.score>=8){
-    confetti({particleCount:150});
-  }
 }
 
 function highlightWords(user, correct){
   const u=user.split(' ');
   const c=correct.split(' ');
-
-  let userRow='';
-  let correctRow='';
+  let userRow='', correctRow='';
 
   c.forEach((w,i)=>{
     const uw=u[i]||'';
@@ -217,19 +197,26 @@ function highlightWords(user, correct){
     correctRow+=`<div class="word-box word-answer">${w}</div>`;
   });
 
-  return `
-    <div class="compare-row">${userRow}</div>
-    <div class="compare-row">${correctRow}</div>
-  `;
+  return `<div class="compare-row">${userRow}</div><div class="compare-row">${correctRow}</div>`;
 }
 
 // ===== HISTORY =====
 function saveHistory(data){
   let h=JSON.parse(localStorage.getItem('history')||'[]');
+  let stats=JSON.parse(localStorage.getItem('stats')||'{}');
+
+  data.results.forEach(r=>{
+    if(!r.correct){
+      stats[r.correctAnswer]=(stats[r.correctAnswer]||0)+1;
+    }
+  });
+
+  localStorage.setItem('stats',JSON.stringify(stats));
 
   h.unshift({
     score:data.score.toFixed(2),
-    time:new Date().toLocaleString()
+    time:new Date().toLocaleString(),
+    results:data.results
   });
 
   localStorage.setItem('history',JSON.stringify(h));
@@ -240,9 +227,9 @@ function renderHistory(){
   let h=JSON.parse(localStorage.getItem('history')||'[]');
 
   let html='';
-  h.slice(0,10).forEach(i=>{
+  h.slice(0,10).forEach((i,index)=>{
     html+=`
-      <div class="history-item">
+      <div class="history-item" onclick="openHistory(${index})">
         <div class="score">🏆 ${i.score}/10</div>
         <div>🕒 ${i.time}</div>
       </div>
@@ -250,6 +237,47 @@ function renderHistory(){
   });
 
   document.getElementById('history').innerHTML=html;
+}
+
+function openHistory(index){
+  let h=JSON.parse(localStorage.getItem('history')||'[]');
+  let stats=JSON.parse(localStorage.getItem('stats')||'{}');
+  let item=h[index];
+
+  let html=`<div id="exportArea"><h4>🏆 ${item.score}/10</h4>
+  <input class="form-control mb-2" id="username" placeholder="Nhập họ tên...">`;
+
+  item.results.forEach(r=>{
+    if(r.correct){
+      html+=`<div class="question">✔ ${r.correctAnswer}</div>`;
+    }else{
+      html+=`<div class="question">❌ ${highlightWords(r.userAnswer,r.correctAnswer)}</div>`;
+    }
+  });
+
+  let top=Object.entries(stats).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  html+=`<hr><h5>❗ Sai nhiều nhất</h5>`;
+  top.forEach(t=>{
+    html+=`<div>🔴 ${t[0]} (${t[1]} lần)</div>`;
+  });
+
+  html+=`</div>
+  <button class="btn btn-success mt-3" onclick="downloadImage()">📸 Lưu ảnh</button>`;
+
+  document.getElementById('modalBody').innerHTML=html;
+  $('#historyModal').modal('show');
+}
+
+function downloadImage(){
+  const name=document.getElementById('username').value||'user';
+
+  html2canvas(document.getElementById('exportArea')).then(canvas=>{
+    const link=document.createElement('a');
+    link.download=`ket-qua-${name}.png`;
+    link.href=canvas.toDataURL();
+    link.click();
+  });
 }
 
 function scrollToHistory(){
